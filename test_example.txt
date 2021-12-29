@@ -1,0 +1,277 @@
+import { screen } from '@testing-library/react';
+import React from 'react';
+
+import { render } from 'src/utils/tests/render';
+
+import { Sidebar } from './Sidebar';
+import { GetFilterFieldsQuery } from '../../../types/generated';
+import userEvent from '@testing-library/user-event';
+
+const gendersMockData: { __typename?: 'Gender' | undefined; name: string }[] = [
+  { __typename: 'Gender', name: 'male' },
+  { __typename: 'Gender', name: 'female' },
+  { __typename: 'Gender', name: 'unknown' },
+];
+const industriesMockData: {
+  __typename?: 'Industry' | undefined;
+  name: string;
+}[] = [
+  { __typename: 'Industry', name: 'banking' },
+  { __typename: 'Industry', name: 'accounting' },
+  { __typename: 'Industry', name: 'food' },
+];
+const senioritysMockData: {
+  __typename?: 'Seniority' | undefined;
+  name: string;
+}[] = [
+  { __typename: 'Seniority', name: 'junior' },
+  { __typename: 'Seniority', name: 'middle' },
+  { __typename: 'Seniority', name: 'senior' },
+];
+const statesMockData: { __typename?: 'State' | undefined; name: string }[] = [
+  { __typename: 'State', name: 'NSW' },
+  { __typename: 'State', name: 'VIC' },
+  { __typename: 'State', name: 'QLD' },
+];
+const generationsMockData: {
+  __typename?: 'Generation' | undefined;
+  name: string;
+}[] = [
+  { __typename: 'Generation', name: '70s' },
+  { __typename: 'Generation', name: '80s' },
+  { __typename: 'Generation', name: '90s' },
+];
+const workTypesMockData: {
+  __typename?: 'WorkType' | undefined;
+  name: string;
+}[] = [
+  { __typename: 'WorkType', name: 'full time' },
+  { __typename: 'WorkType', name: 'part time' },
+  { __typename: 'WorkType', name: 'casual' },
+];
+
+const filterFieldsDataMock: GetFilterFieldsQuery = {
+  genders: gendersMockData,
+  industries: industriesMockData,
+  senioritys: senioritysMockData,
+  states: statesMockData,
+  generations: generationsMockData,
+  workTypes: workTypesMockData,
+};
+
+// const mockMultipleSelect = jest.fn();
+
+// jest.mock('../MultipleSelect/MultipleSelect', () => {
+//   return {
+//     MultipleSelect: (props: any) => {
+//       Object.keys(props).indexOf('isDisabled') === -1
+//         ? mockMultipleSelect({
+//             options: props.options,
+//             canSelect: props.canSelect,
+//             value: props.value,
+//             title: props.title,
+//             description: props.description,
+//           })
+//         : mockMultipleSelect({
+//             options: props.options,
+//             canSelect: props.canSelect,
+//             value: props.value,
+//             title: props.title,
+//             description: props.description,
+//             isDisabled: props.isDisabled,
+//           });
+
+//       function handleChange(event: React.ChangeEvent<HTMLSelectElement>) {
+//         const options = event.target.options;
+//         const selectedValue = [];
+//         for (let i = 0, l = options.length; i < l; i++) {
+//           if (options[i].selected) {
+//             selectedValue.push(options[i].value);
+//           }
+//         }
+
+//         props.onChange(selectedValue);
+//       }
+//       return (
+//         <div>
+//           <div>{props.title}</div>
+//           {!!props.description && <div>{props.description}</div>}
+//           <select
+//             name={`${props.title}_mutiple_select_mock`}
+//             data-testid={`${props.title}_mutiple_select_mock`}
+//             value={props.value}
+//             multiple
+//             onChange={handleChange}
+//           >
+//             {props.options.map((item: any, index: number) => {
+//               return (
+//                 <option key={index} value={item.value}>
+//                   {item.value}
+//                 </option>
+//               );
+//             })}
+//           </select>
+//         </div>
+//       );
+//     },
+//   };
+// });
+
+describe('<Sidebar />', () => {
+  it(`should render apply button, clear all button, 
+    two multiple select dropdowns, 
+    two single select dropdowns`, async () => {
+    render(<Sidebar filterFieldsData={filterFieldsDataMock} />);
+    //check apply button
+    expect(screen.getByText(/Apply/i)).toBeInTheDocument();
+    //check clear all button
+    expect(screen.getByText(/Clear all/i)).toBeInTheDocument();
+    //check 2 mutiple select dropdowns
+    expect(
+      screen.getByTestId('Industry_mutiple_select_mock'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId('Seniority_mutiple_select_mock'),
+    ).toBeInTheDocument();
+    //check driver dropdown
+    expect(
+      screen.getByRole('combobox', { name: 'Explore drivers by' }),
+    ).toBeInTheDocument();
+    //check drill down further dropdown
+    expect(
+      screen.getByRole('combobox', { name: 'Drill down further down by' }),
+    ).toBeInTheDocument();
+  });
+
+  it(`Initially the forth dropdown is disabled`, () => {
+    render(<Sidebar filterFieldsData={filterFieldsDataMock} />);
+    expect(mockMultipleSelect).toHaveBeenCalledWith(
+      expect.objectContaining({
+        options: [],
+        canSelect: true,
+        value: [],
+        title: 'Seniority',
+        description: 'Select one or max two to compare',
+        isDisabled: true,
+      }),
+    );
+  });
+
+  it(`after two options selected for second dropdown, user can't select any more`, async () => {
+    render(<Sidebar filterFieldsData={filterFieldsDataMock} />);
+    userEvent.selectOptions(
+      screen.getByTestId('Industry_mutiple_select_mock'),
+      ['food', 'banking'],
+    );
+    expect(mockMultipleSelect).toHaveBeenCalledWith(
+      expect.objectContaining({
+        options: [
+          { value: 'banking', label: 'banking' },
+          { value: 'accounting', label: 'accounting' },
+          { value: 'food', label: 'food' },
+        ],
+        canSelect: false,
+        value: ['banking', 'food'],
+        title: 'Industry',
+        description: 'Select one or max two to compare',
+      }),
+    );
+  });
+
+  it(`after two options selected for forth dropdown, user can't select any more`, async () => {
+    render(<Sidebar filterFieldsData={filterFieldsDataMock} />);
+    userEvent.selectOptions(
+      screen.getByRole('combobox', { name: 'Drill down further down by' }),
+      'Gender',
+    );
+    userEvent.selectOptions(
+      screen.getByTestId('Seniority_mutiple_select_mock'),
+      ['male', 'female'],
+    );
+    expect(mockMultipleSelect).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        options: [
+          { value: 'male', label: 'male' },
+          { value: 'female', label: 'female' },
+          { value: 'unknown', label: 'unknown' },
+        ],
+        canSelect: false,
+        value: ['male', 'female'],
+        title: 'Seniority',
+        description: 'Select one or max two to compare',
+        isDisabled: false,
+      }),
+    );
+  });
+
+  it(`after first dropdown value changed, 
+  second dropdown options should be changed accordingly`, async () => {
+    render(<Sidebar filterFieldsData={filterFieldsDataMock} />);
+
+    const secondDropdownOptionsBeforeChange = screen.getByTestId(
+      'Industry_mutiple_select_mock',
+    ).innerHTML;
+
+    expect(secondDropdownOptionsBeforeChange).toContain('food');
+    expect(secondDropdownOptionsBeforeChange).toContain('banking');
+    expect(secondDropdownOptionsBeforeChange).toContain('accounting');
+    expect(secondDropdownOptionsBeforeChange).not.toContain('female');
+    expect(secondDropdownOptionsBeforeChange).not.toContain('male');
+    expect(secondDropdownOptionsBeforeChange).not.toContain('unknown');
+    userEvent.selectOptions(
+      screen.getByRole('combobox', {
+        name: 'Explore drivers by',
+      }),
+      'Gender',
+    );
+
+    const secondDropdownOptionsAftereChange = screen.getByTestId(
+      'Industry_mutiple_select_mock',
+    ).innerHTML;
+    expect(secondDropdownOptionsAftereChange).not.toContain('food');
+    expect(secondDropdownOptionsAftereChange).not.toContain('banking');
+    expect(secondDropdownOptionsAftereChange).not.toContain('accounting');
+    expect(secondDropdownOptionsAftereChange).toContain('female');
+    expect(secondDropdownOptionsAftereChange).toContain('male');
+    expect(secondDropdownOptionsAftereChange).toContain('unknown');
+  });
+
+  it(`after third dropdown value changed, 
+  forth dropdown options should be changed accordingly`, async () => {
+    render(<Sidebar filterFieldsData={filterFieldsDataMock} />);
+    screen.getByRole('combobox', { name: 'Drill down further down by' });
+    userEvent.selectOptions(
+      screen.getByRole('combobox', { name: 'Drill down further down by' }),
+      'Gender',
+    );
+    const forthDropdownOptionsBeforeChange = screen.getByTestId(
+      'Seniority_mutiple_select_mock',
+    ).innerHTML;
+
+    expect(forthDropdownOptionsBeforeChange).toContain('female');
+    expect(forthDropdownOptionsBeforeChange).toContain('male');
+    expect(forthDropdownOptionsBeforeChange).toContain('unknown');
+    expect(forthDropdownOptionsBeforeChange).not.toContain('full time');
+    expect(forthDropdownOptionsBeforeChange).not.toContain('part time');
+    expect(forthDropdownOptionsBeforeChange).not.toContain('casual');
+    userEvent.selectOptions(
+      screen.getByRole('combobox', { name: 'Drill down further down by' }),
+      'Work type',
+    );
+
+    const forthDropdownOptionsAftereChange = screen.getByTestId(
+      'Seniority_mutiple_select_mock',
+    ).innerHTML;
+    expect(forthDropdownOptionsAftereChange).not.toContain('female');
+    expect(forthDropdownOptionsAftereChange).not.toContain('male');
+    expect(forthDropdownOptionsAftereChange).not.toContain('unknown');
+    expect(forthDropdownOptionsAftereChange).toContain('full time');
+    expect(forthDropdownOptionsAftereChange).toContain('part time');
+    expect(forthDropdownOptionsAftereChange).toContain('casual');
+  });
+  it.only(`test`, () => {
+    render(<Sidebar filterFieldsData={filterFieldsDataMock} />);
+    const t = screen.getByRole('combobox', { name: 'Industry' });
+    expect(t).toBeDisabled();
+  });
+});
